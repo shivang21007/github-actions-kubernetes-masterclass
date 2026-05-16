@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ${DOCKERHUB_USERNAME}/skillpulse-backend:latest
+          image: shivang21007/skillpulse-backend:2baefa65744cfff5f408fe517a3f76e717ea2e74
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
