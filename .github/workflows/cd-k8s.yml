@@ -1,20 +1,17 @@
 name: k8s (manifest bump)
 
 on:
-  # Run after the orchestrator CI workflow — the name must match ci.yml `name:` exactly.
-  workflow_run:
-    workflows:
-      - CI Pipeline
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      head_sha:
+        description: Commit SHA to pin in manifests (same tag as Docker images from CI).
+        required: true
+        type: string
 
 jobs:
   bump-manifests:
     name: Pin backend & frontend image tags in manifests
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
     steps:
@@ -24,7 +21,7 @@ jobs:
 
       - name: Pin backend + frontend images to CI commit SHA
         env:
-          SHA: ${{ github.event.workflow_run.head_sha }}
+          SHA: ${{ inputs.head_sha }}
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
           set -euo pipefail
@@ -37,7 +34,7 @@ jobs:
 
       - name: Commit and push if manifests changed
         env:
-          SHA: ${{ github.event.workflow_run.head_sha }}
+          SHA: ${{ inputs.head_sha }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"

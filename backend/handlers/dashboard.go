@@ -11,9 +11,19 @@ import (
 func GetDashboard(c *gin.Context) {
 	var dash models.Dashboard
 
-	database.DB.QueryRow("SELECT COUNT(*) FROM skills").Scan(&dash.TotalSkills)
-	database.DB.QueryRow("SELECT COALESCE(SUM(hours), 0) FROM learning_logs").Scan(&dash.TotalHours)
-	database.DB.QueryRow("SELECT COUNT(*) FROM learning_logs").Scan(&dash.TotalLogs)
+	for _, stmt := range []struct {
+		q string
+		d any
+	}{
+		{"SELECT COUNT(*) FROM skills", &dash.TotalSkills},
+		{"SELECT COALESCE(SUM(hours), 0) FROM learning_logs", &dash.TotalHours},
+		{"SELECT COUNT(*) FROM learning_logs", &dash.TotalLogs},
+	} {
+		if err := database.DB.QueryRow(stmt.q).Scan(stmt.d); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	}
 
 	err := database.DB.QueryRow(`
 		SELECT s.name FROM skills s

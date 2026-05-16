@@ -9,7 +9,8 @@ on:
       - 'k8s/**'
       - 'docs/**'
       - '**/*.md'
-
+  # This workflow is called by the cd.yml workflow
+  workflow_call:
   # Allow manual triggering of the workflow
   workflow_dispatch:
 

@@ -1,18 +1,30 @@
 name: Deploy to kind cluster
 
 on:
-  workflow_run:
-    workflows:
-      - 'k8s (manifest bump)'
-    types:
-      - completed
-    branches:
-      - main
+  # Trigger the workflow on push to main branch
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  # Allow manual triggering of the workflow
   workflow_dispatch:
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  k8s-manifest-bump:
+    needs: [ci]
+    uses: ./.github/workflows/cd-k8s.yml
+    secrets: inherit
+    with:
+      head_sha: ${{ github.sha }}
+
   deploy:
     name: SSH to server and deploy
+    needs: [k8s-manifest-bump]
     runs-on: ubuntu-latest
 
     steps:
