@@ -1,39 +1,24 @@
-name: Deploy to kind cluster
+name: Deploy manifests (k8s only)
 
-# App / workflow changes: CI → bump image tags in manifests → SSH kubectl apply.
-# Commits under k8s/** only → use k8s-apply.yml instead (deploy only).
+# Simple path filter: pushes that touch manifests but not triggered by cd.yml (which ignores k8s/**).
+#
+# Caveat: if one commit changes both app code and k8s/, BOTH this workflow AND cd.yml
+# run (two kubectl applies). Prefer separate commits, or tolerate duplicate apply.
 
 on:
   push:
     branches: [main]
-    paths-ignore:
+    paths:
       - 'k8s/**'
-      - 'docs/**'
-      - '**/*.md'
-  workflow_dispatch:
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-    secrets: inherit
-
-  k8s-manifest-bump:
-    needs: [ci]
-    uses: ./.github/workflows/modify-k8s.yml
-    secrets: inherit
-    with:
-      head_sha: ${{ github.sha }}
-
   deploy:
-    name: SSH to server and deploy
-    needs: [k8s-manifest-bump]
+    name: SSH to server and apply manifests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: SSH into server and apply manifests
-        uses: appleboy/ssh-action@v1
+      - uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}

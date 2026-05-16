@@ -21,12 +21,6 @@ jobs:
           dockerfile: frontend/Dockerfile
           ignore: DL3018,DL3008
 
-      - name: Lint Backend Dockerfile
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: backend/Dockerfile
-          ignore: DL3018,DL3008
-
   build-scan-push:
     name: Build, Scan, and Push Frontend Image
     runs-on: ubuntu-latest

@@ -17,7 +17,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.26.x'
+          go-version-file: backend/go.mod
           cache: true
           cache-dependency-path: backend/go.sum
 
@@ -50,7 +50,6 @@ jobs:
       - name: Run govulncheck
         uses: golang/govulncheck-action@v1
         with:
-          go-version-input: '1.26.x'
           go-version-file: backend/go.mod
           work-dir: backend
           go-package: ./...

@@ -1,14 +1,6 @@
 name: CI Pipeline
 
 on:
-  # Trigger the workflow on push to main branch
-  push:
-    branches: [main]
-    # Ignore changes to k8s, docs, and markdown files
-    paths-ignore:
-      - 'k8s/**'
-      - 'docs/**'
-      - '**/*.md'
   # This workflow is called by the cd.yml workflow
   workflow_call:
   # Allow manual triggering of the workflow

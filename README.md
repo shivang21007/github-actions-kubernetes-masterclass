@@ -297,7 +297,7 @@ git push to main
     ↓
 CI: build images, push trainwithshubham/skillpulse-{backend,frontend}:{latest,<sha>}
     ↓
-cd-k8s.yml: sed image: lines in k8s/20-backend.yaml + k8s/30-frontend.yaml
+modify-k8s.yml: sed image: lines in k8s/20-backend.yaml + k8s/30-frontend.yaml
             commit "deploy: pin backend+frontend to <short-sha>" to main as github-actions[bot]
     ↓
 (you, locally):
@@ -336,7 +336,7 @@ The previous chapter's `cd.yml` is still in the repo — it SSHes into an EC2 an
 
 - **Push a commit that fails to build** → both CD workflows are *skipped*, not failed (the `if: success()` gate).
 - **Rotate the Docker Hub token** → next CI fails at the login step. You'll learn what an expired credential looks like in logs.
-- **Edit `k8s/20-backend.yaml`'s image tag by hand and push** → CI is *skipped* (paths-ignore), `cd-k8s.yml` does fire but the manifest is already pinned, so it no-ops and exits 0. That's the loop-protection working.
+- **Edit `k8s/20-backend.yaml`'s image tag by hand and push** → `k8s-apply.yml` deploys; the manifest bump workflow may no-op if already pinned.
 
 ---
 
