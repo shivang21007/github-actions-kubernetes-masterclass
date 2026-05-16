@@ -12,6 +12,11 @@ on:
       - '**/*.md'
   workflow_dispatch:
 
+# Reusable workflows cannot grant broader token scope than their caller.
+# modify-k8s.yml git-pushes pinned manifests → needs contents: write here too.
+permissions:
+  contents: write
+
 jobs:
   ci:
     uses: ./.github/workflows/ci.yml
