@@ -1,5 +1,9 @@
 name: CI Pipeline
 
+permissions:
+  contents: read
+  actions: write
+
 on:
   # This workflow is called by the cd.yml workflow
   workflow_call:

@@ -16,6 +16,7 @@ on:
 # modify-k8s.yml git-pushes pinned manifests → needs contents: write here too.
 permissions:
   contents: write
+  actions: write # BuildKit GHA cache (backend/frontend CI) + read cache
 
 jobs:
   ci:
