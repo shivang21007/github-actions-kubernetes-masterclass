@@ -4,6 +4,8 @@ name: Deploy manifests (k8s only)
 #
 # Caveat: if one commit changes both app code and k8s/, BOTH this workflow AND cd.yml
 # run (two kubectl applies). Prefer separate commits, or tolerate duplicate apply.
+#
+# Skip pushes from github-actions[bot] (modify-k8s manifest bumps): cd.yml already kubectl apply-after-bump.
 
 on:
   push:
@@ -14,6 +16,8 @@ on:
 jobs:
   deploy:
     name: SSH to server and apply manifests
+    # Avoid double deploy when modify-k8s bumps manifests (same release as cd.yml deploy).
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
