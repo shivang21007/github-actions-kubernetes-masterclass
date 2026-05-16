@@ -21,7 +21,7 @@ metadata:
   name: backend
   namespace: skillpulse
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: backend
@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: trainwithshubham/skillpulse-backend:latest
+          image: ${DOCKERHUB_USERNAME}/skillpulse-backend:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -64,6 +64,7 @@ spec:
               cpu: 100m
               memory: 64Mi
             limits:
+              cpu: 200m
               memory: 128Mi
           livenessProbe:
             httpGet:

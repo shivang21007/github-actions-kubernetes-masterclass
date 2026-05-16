@@ -1,0 +1,26 @@
+---
+# HTTP entrypoint: the ingress controller (installed by Makefile) load-balances
+# across all frontend Pods. Scale deployment/frontend replicas >1 to use that LB.
+#
+# Requires: ingress-nginx (see Makefile `up`). Access: http://localhost:8060
+# (kind maps host:8060 → node:30060; the controller is patched to hostPort 30060).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: skillpulse
+  namespace: skillpulse
+  labels:
+    app: skillpulse
+spec:
+  ingressClassName: nginx
+  rules:
+    # With no host, nginx-ingress matches any Host header (curl to localhost works).
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

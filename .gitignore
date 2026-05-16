@@ -13,7 +13,7 @@ Thumbs.db
 
 # Logs
 *.log
-
+env.sh
 # Local Claude Code guidance
 CLAUDE.md
 

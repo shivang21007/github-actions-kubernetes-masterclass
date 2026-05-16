@@ -1,0 +1,109 @@
+name: Backend CI Pipeline
+
+on:
+  # This workflow is called by the ci.yml workflow
+  workflow_call:
+
+  # This workflow is triggered manually
+  workflow_dispatch:
+
+
+jobs:
+  code-quality-scan:
+    name: Code Quality Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+          cache: true
+          cache-dependency-path: backend/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          working-directory: ./backend
+          version: latest
+
+  secrets-scan:
+    name: Secrets Scan using GitLeaks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run GitLeaks Scanner
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  vulnerability-scan:
+    name: Run govulncheck for Go Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: '1.26.x'
+          go-package: './backend/...'
+
+  dockerfile-linting:
+    name: Run Hadolint for Dockerfiles Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Frontend Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: frontend/Dockerfile
+          ignore: DL3018,DL3008
+
+      - name: Lint Backend Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: backend/Dockerfile
+          ignore: DL3018,DL3008
+
+  build-scan-push:
+    name: Build, Scan, and Push Backend Image
+    runs-on: ubuntu-latest
+    needs: [code-quality-scan, secrets-scan, vulnerability-scan, dockerfile-linting]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image locally
+        uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          load: true
+          push: false
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/skillpulse-backend:${{ github.sha }}
+
+      - name: Scan built image with Trivy
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/skillpulse-backend:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          format: table
+          exit-code: 1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push Docker Image to Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/skillpulse-backend:${{ github.sha }}

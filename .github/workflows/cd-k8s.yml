@@ -1,15 +1,20 @@
-name: CD (kind cluster — manifest bump)
+name: k8s (manifest bump)
 
 on:
+  # Run after the orchestrator CI workflow — the name must match ci.yml `name:` exactly.
   workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
+    branches:
+      - main
 
 jobs:
   bump-manifests:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && vars.DEPLOY_ENABLED == 'true' }}
+    name: Pin backend & frontend image tags in manifests
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: write
     steps:
@@ -17,23 +22,25 @@ jobs:
         with:
           ref: main
 
-      - name: Pin backend + frontend images to commit SHA
+      - name: Pin backend + frontend images to CI commit SHA
         env:
           SHA: ${{ github.event.workflow_run.head_sha }}
           DOCKER_USER: ${{ secrets.DOCKERHUB_USERNAME }}
         run: |
+          set -euo pipefail
           if [ -z "$DOCKER_USER" ]; then
             echo "ERROR: DOCKERHUB_USERNAME secret is not set."
             exit 1
           fi
-          sed -i "s|image: ${DOCKER_USER}/skillpulse-backend:.*|image: ${DOCKER_USER}/skillpulse-backend:${SHA}|"  k8s/20-backend.yaml
-          sed -i "s|image: ${DOCKER_USER}/skillpulse-frontend:.*|image: ${DOCKER_USER}/skillpulse-frontend:${SHA}|" k8s/30-frontend.yaml
+          sed -i -E "s|^([[:space:]]*)image:.*skillpulse-backend.*|\1image: $DOCKER_USER/skillpulse-backend:$SHA|" k8s/20-backend.yaml
+          sed -i -E "s|^([[:space:]]*)image:.*skillpulse-frontend.*|\1image: $DOCKER_USER/skillpulse-frontend:$SHA|" k8s/30-frontend.yaml
 
-      - name: Commit + push if changed
+      - name: Commit and push if manifests changed
         env:
           SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          git config user.name  "github-actions[bot]"
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet; then
             echo "Manifests already pinned to ${SHA}; nothing to commit."

@@ -193,7 +193,7 @@ Same app, same images, same external port — but now every primitive a student 
 
 ```bash
 make up                          # creates the kind cluster + applies manifests
-# visit http://localhost:8888
+# visit http://localhost:8060
 make down                        # deletes the cluster (and the MySQL data with it)
 ```
 
@@ -227,44 +227,37 @@ Inner-loop after editing code: `make restart` rebuilds the images, reloads them 
 The cluster has **three nodes**: one control-plane and two workers (`skillpulse-worker`, `skillpulse-worker2`). Workloads schedule onto the workers — the control-plane is tainted `NoSchedule` by default, so it stays focused on the API server, scheduler, and controller-manager.
 
 ```
-host browser            kind cluster (1 control-plane + 2 workers)
-http://localhost:8888
+http://localhost:8060
         │
-        ▼ (kind extraPortMappings on control-plane: hostPort 8888 → nodePort 30080)
-   Service frontend (NodePort 30080)  — reachable on every node, kube-proxy routes
-        │
+        ▼  kind maps host 8060 → node :30060 (ingress-nginx HTTP hostPort)
+   Ingress skillpulse  ───►  Service frontend (ClusterIP)
+        │                        │
+        │             Deployment frontend (2 replicas) — ingress LB across pods
         ▼
-   Deployment frontend (nginx + static)  — runs on whichever worker the scheduler picks
-        │ proxy_pass http://backend:8080  (same hostname as docker-compose)
-        ▼
-   Service backend (ClusterIP 8080)
-        │
-        ▼
-   Deployment backend (Go + Gin)
-        │ DB_HOST=mysql
-        ▼
-   Service mysql (Headless 3306)
-        │
-        ▼
-   StatefulSet mysql + 1Gi PVC + ConfigMap-mounted init.sql
+   nginx in pod  proxy_pass  │  Service backend (ClusterIP 8080)
+                       ▼
+              Deployment backend (Go)  ──►  mysql
 ```
 
 ### Manifest layout
 
 ```
 k8s/
-  kind-config.yaml      cluster shape: 1 control-plane + 2 workers, host 8888 → node 30080
+  kind-config.yaml      1 control-plane + 2 workers, ingress-ready, host 8060 → node :30060
   00-namespace.yaml     namespace: skillpulse
   10-mysql.yaml         Secret + ConfigMap (init.sql) + headless Service + StatefulSet + 1Gi PVC
   20-backend.yaml       Deployment + ClusterIP Service, env from Secret, /health probes
-  30-frontend.yaml      Deployment + NodePort Service (30080), / probes
+  30-frontend.yaml      Deployment (2 replicas) + ClusterIP Service, / probes
+  40-ingress.yaml       Ingress → frontend:80 (HTTP routing + LB via ingress-nginx)
 ```
+
+`make up` installs **ingress-nginx**, **patches** the controller pod so HTTP uses **hostPort 30060** on the node (the upstream default is 80), then applies SkillPulse. **kind** forwards **host :8060** to **node :30060** so the browser uses `http://localhost:8060`.
 
 ### Useful commands
 
 | Command | What it does |
 |---|---|
-| `make status` | One-screen view of pods, services, endpoints |
+| `make status` | One-screen view of pods, services, ingress, endpoints |
 | `make logs` | Tail all three workloads at once |
 | `make mysql` | Open a `mysql` shell in the StatefulSet pod |
 | `make restart` | Roll backend + frontend (e.g. after pushing a new image) |
@@ -272,23 +265,24 @@ k8s/
 ### Smoke test
 
 ```bash
-curl http://localhost:8888/health                 # → {"status":"healthy"}
-curl http://localhost:8888/api/dashboard          # → seed-data counters
-curl -s http://localhost:8888/ | grep '<title>'   # → HTML title containing "SkillPulse"
+curl http://localhost:8060/health                 # → {"status":"healthy"}
+curl http://localhost:8060/api/dashboard          # → seed-data counters
+curl -s http://localhost:8060/ | grep '<title>'   # → HTML title containing "SkillPulse"
 ```
 
 ### Gotchas worth knowing
 
 - **Docker Desktop must be running.** `docker build`, `kind`, and `kubectl` all talk to the Docker daemon on your machine.
 - **First boot is slow.** The local-path provisioner has to materialise the PVC before MySQL starts. Expect 10–30s of `Pending` on `make up`'s first run.
-- **Host port collision.** If something else owns 8888 on the host, the cluster comes up but `curl localhost:8888` fails. Free the port — or change `hostPort` in `k8s/kind-config.yaml` and re-run `make down && make up`.
+- **Host port collision.** If something else owns **8060** on the host, the cluster comes up but `curl localhost:8060` fails. Free the port — or change `hostPort` / `containerPort` in `k8s/kind-config.yaml`, update the ingress **hostPort** patch in the `Makefile` to match, and re-run `make down && make up`.
 - **No Docker Hub round-trip in this chapter.** Images are built locally and pushed into the kind node via `kind load`. Useful when you're iterating on code: `make restart` rebuilds + reloads + rolls without ever touching Docker Hub. (Production EKS/GKE clusters do pull from a registry — that's the next chapter.)
 
 ### What's next
 
-This is the **kind chapter** — same app, real Kubernetes primitives, but limited to one local node and `NodePort` access. The next chapter graduates the same workload to:
+This is the **kind chapter** — same app, real Kubernetes primitives, with **ClusterIP + Ingress** (ingress-nginx) so traffic is L7-routed and load-balanced across two frontend replicas instead of exposing a NodePort.
 
-- An **Ingress** controller (nginx-ingress) so traffic enters via `Ingress` rules instead of NodePort.
+When you graduate to **EKS/GKE/AKS**, swap kind’s port forwarding for a real cloud load balancer in front of the same Ingress pattern:
+
 - **Helm or Kustomize** so the manifests stop being copy-pasted between environments.
 - A real **cloud cluster** (EKS / GKE / AKS) and CD that runs `kubectl apply` from the pipeline instead of `appleboy/ssh-action`.
 

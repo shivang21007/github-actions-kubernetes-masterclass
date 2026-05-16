@@ -1,4 +1,5 @@
 ---
+# Secret for the MySQL database
 apiVersion: v1
 kind: Secret
 metadata:
@@ -11,6 +12,7 @@ stringData:
   MYSQL_USER: skillpulse
   MYSQL_PASSWORD: skillpulse123
 ---
+# ConfigMap for the MySQL init script
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -57,6 +59,7 @@ data:
         (4, 1.0, 'Created Azure DevOps org and project', '2026-03-16'),
         (5, 1.5, 'Terraform basics - providers, resources, state', '2026-03-17');
 ---
+# Headless Service for the MySQL database
 apiVersion: v1
 kind: Service
 metadata:
@@ -73,6 +76,7 @@ spec:
       port: 3306
       targetPort: 3306
 ---
+# StatefulSet for the MySQL database
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
