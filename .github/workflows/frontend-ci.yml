@@ -33,6 +33,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Bakes deploying commit into the static page (runner-only; repo file stays unchanged in git).
+      - name: Inject Git SHA into frontend/index.html
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          sed -i "s|<span id=\"commit-sha\"></span>|<span id=\"commit-sha\">${SHA}</span>|" frontend/index.html
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
