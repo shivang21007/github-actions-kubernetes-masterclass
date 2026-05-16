@@ -40,6 +40,7 @@ apply: ## Apply manifests and wait for rollouts
 	              -f k8s/10-mysql.yaml \
 	              -f k8s/20-backend.yaml \
 	              -f k8s/30-frontend.yaml \
+	              -f k8s/35-hpa.yaml \
 	              -f k8s/40-ingress.yaml
 	kubectl rollout status statefulset/mysql    -n $(NAMESPACE) --timeout=180s
 	kubectl rollout status deployment/backend   -n $(NAMESPACE) --timeout=120s

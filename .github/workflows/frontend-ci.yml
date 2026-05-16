@@ -33,11 +33,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Bakes deploying commit into the static page (runner-only; repo file stays unchanged in git).
-      - name: Inject Git SHA into frontend/index.html
+      # Runner-only: bake IST timestamp + commit SHA (repo keeps empty spans for local/dev).
+      - name: Inject IST build stamp and Git SHA into frontend/index.html
         env:
           SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
+          # %-d avoids leading-zero day (GNU date, ubuntu-latest).
+          STAMP="$(TZ=Asia/Kolkata LC_TIME=C.UTF-8 date '+[%-d %B %Y, %I:%M %p IST]')"
+          sed -i "s|<span id=\"build-stamp\"></span>|<span id=\"build-stamp\">${STAMP}</span>|" frontend/index.html
           sed -i "s|<span id=\"commit-sha\"></span>|<span id=\"commit-sha\">${SHA}</span>|" frontend/index.html
 
       - name: Set up Docker Buildx

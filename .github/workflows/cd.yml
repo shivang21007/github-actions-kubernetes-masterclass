@@ -58,4 +58,5 @@ jobs:
             kubectl apply -f k8s/10-mysql.yaml
             kubectl apply -f k8s/20-backend.yaml
             kubectl apply -f k8s/30-frontend.yaml
+            kubectl apply -f k8s/35-hpa.yaml
             kubectl apply -f k8s/40-ingress.yaml
